@@ -158,7 +158,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # Una casilla para que el usuario escriba su pregunta
-if prompt := st.chat_input("Preguntale al bot sobre que tenemos en inventario, "):
+if prompt := st.chat_input("Preguntale al bot sobre que tenemos en inventario, precios, y recomendaciones de productos."):
     # Anadimos el mensaje del usuario a la session_state
     st.session_state.messages.append({"role": "user", "content": prompt})
 
