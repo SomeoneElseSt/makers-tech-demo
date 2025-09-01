@@ -3,6 +3,7 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 from agno.agent import Agent
 from agno.models.google import Gemini
+from credentials import validate_token, TIME_TO_REFRESH
 
 ### RECS
 
@@ -32,14 +33,8 @@ from agno.models.google import Gemini
 
 # CONSTANTES
 SHEET_INVENTARIO = "0"
-SHEET_CREDENCIALES = "960299724"
-TIME_TO_REFRESH = "0"
 GEMINI_MODEL = "gemini-2.0-flash"
 MAX_CONVERSATION_HISTORY = 10
-CREDENTIALS_COLUMN_INDEX = 0
-CREDENTIALS_ROW_COUNT = 2
-CREDENTIAL_CELL_ROW = 0
-CREDENTIAL_CELL_COL = 0
 
 # Revisamos si la Gemini API key esta en el secrets.toml y si no lo esta le hacemos saber al usario que hay un error
 GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
@@ -105,27 +100,19 @@ else:
         st.rerun()
 
 def display_admin_dashboard(conn, df):
-    token = st.text_input("Aquí va tu credencial:", type="password")
+    input_token = st.text_input("Aquí va tu credencial:", type="password")
 
-    if not token:
+    if not input_token:
         st.info("Ingresa el token para acceder al panel de administrador")
         return #
     
-    # Se obtiene la sheet llamada "Credenciales" que tiene la credencial
-    result = conn.read(
-        worksheet=SHEET_CREDENCIALES,  
-        ttl=TIME_TO_REFRESH,
-        usecols=[CREDENTIALS_COLUMN_INDEX], # Se limita a la primera columna
-        nrows=CREDENTIALS_ROW_COUNT # Se limita a las dos primeras filas
-    )
-    stored_token = result.iloc[CREDENTIAL_CELL_ROW, CREDENTIAL_CELL_COL] # Accede la celda donde está la credencial
+    validation_result = validate_token(input_token, conn, df, st)
 
-    if token != stored_token:
+    if not validation_result:
         st.error("Token incorrecto")
-        return # Si el token es incorrecto retornamos el error temprano
+        return
 
     st.success("Acceso concedido")
-
     st.dataframe(df)
 
     # Visualizamos el numero de cada producto
