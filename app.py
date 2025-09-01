@@ -30,6 +30,16 @@ from agno.models.google import Gemini
 
 # Despues debes tener un header [connections.gsheets] y una variable spreadsheet=str con el link de una Google Sheet que tenga view-permissions y que sea publica
 
+# Constantes
+SHEET_INVENTARIO = "0"
+SHEET_CREDENCIALES = "960299724"
+TIME_TO_REFRESH = "0"
+GEMINI_MODEL = "gemini-2.0-flash"
+MAX_CONVERSATION_HISTORY = 10
+CREDENTIALS_COLUMN_INDEX = 0
+CREDENTIALS_ROW_COUNT = 2
+CREDENTIAL_CELL_ROW = 0
+CREDENTIAL_CELL_COL = 0
 
 ### STREAMLIT CONFIG
 st.set_page_config(
@@ -49,8 +59,8 @@ st.write("De igual manera, si eres administrador, presiona el botón de abajo e 
 conn = st.connection("gsheets", type=GSheetsConnection) # Establece una conexion con una Google Sheet con tal que esta sea publica y tenga permisos de read
 
 df = conn.read( # Lee la informacion de la Google Sheet
-    worksheet="0", # Se va a la primera Sheet, el Inventario
-    ttl="0" # Desactiva el caching para que siempre obtenga los datos mas recientes de esa Sheet
+    worksheet=SHEET_INVENTARIO, # Se va a la primera Sheet, el Inventario
+    ttl=TIME_TO_REFRESH # Desactiva el caching con un time de refresh de 0para que siempre obtenga los datos mas recientes de la Sheet
 )
 
 pd.set_option('display.max_colwidth', None) # Importante: Hay que expandir el DF manualmente para que el Agente pueda leer el texto en las columnas y filas completo
@@ -88,12 +98,12 @@ def display_admin_dashboard(conn, df):
     
     # Se obtiene la sheet llamada "Credenciales" que tiene la credencial
     result = conn.read(
-        worksheet="960299724",  
-        ttl=0,
-        usecols=[0],
-        nrows=2
+        worksheet=SHEET_CREDENCIALES,  
+        ttl=TIME_TO_REFRESH,
+        usecols=[CREDENTIALS_COLUMN_INDEX], # Se limita a la primera columna
+        nrows=CREDENTIALS_ROW_COUNT # Se limita a las dos primeras filas
     )
-    stored_token = result.iloc[0, 0] # Accede la celda donde está la credencial
+    stored_token = result.iloc[CREDENTIAL_CELL_ROW, CREDENTIAL_CELL_COL] # Accede la celda donde está la credencial
 
     if token != stored_token:
         st.error("Token incorrecto")
@@ -125,7 +135,7 @@ if st.session_state.show_admin:
 ### CHATBOT CONFIG
 
 agent = Agent(
-    model=Gemini("gemini-2.0-flash", api_key=st.secrets["GEMINI_API_KEY"]),
+    model=Gemini(GEMINI_MODEL, api_key=st.secrets["GEMINI_API_KEY"]),
     instructions=f"""
     Apenas el usuario envíe el primer mensaje, diles lo siguiente: Hola, bienvenido al inventario de Makers Tech. ¿Con qué te puedo ayudar? y si el primer mensaje del usuario es una pregunta, di el anterior mensaje sin preguntarles con que los puedes ayudar y responde su pregunta.
     
@@ -169,9 +179,9 @@ if prompt := st.chat_input("Preguntale al bot sobre que tenemos en inventario, p
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Para que el modelo tenga memoria, creamos una historia de conversacion en base a los ultimos 10 mensajes
+    # Para que el modelo tenga memoria, creamos una historia de conversacion en base a los ultimos mensajes
     conversation_history = ""
-    for msg in st.session_state.messages[-10:]:  # Solo damos los ultimos diez mensajes del usuario
+    for msg in st.session_state.messages[-MAX_CONVERSATION_HISTORY:]:  # Solo damos los ultimos 10 mensajes del usuario
         role = "Usuario" if msg["role"] == "user" else "Asistente"
         conversation_history += f"{role}: {msg['content']}\n\n"
 
