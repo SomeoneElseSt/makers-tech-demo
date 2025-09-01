@@ -30,7 +30,7 @@ from agno.models.google import Gemini
 
 # Despues debes tener un header [connections.gsheets] y una variable spreadsheet=str con el link de una Google Sheet que tenga view-permissions y que sea publica
 
-# Constantes
+# CONSTANTES
 SHEET_INVENTARIO = "0"
 SHEET_CREDENCIALES = "960299724"
 TIME_TO_REFRESH = "0"
@@ -40,6 +40,21 @@ CREDENTIALS_COLUMN_INDEX = 0
 CREDENTIALS_ROW_COUNT = 2
 CREDENTIAL_CELL_ROW = 0
 CREDENTIAL_CELL_COL = 0
+
+# Revisamos si la Gemini API key esta en el secrets.toml y si no lo esta le hacemos saber al usario que hay un error
+GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
+
+if not GEMINI_API_KEY or GEMINI_API_KEY.strip() == "":
+    st.error("El servicio de Chatbot no esta disponible. Contacta al administrador de la pagina.")
+    st.stop()
+
+# Revisamos si la Google Sheet esta en el secrets.toml y si no lo esta le hacemos saber al usario que hay un error
+GSHEETS_SPREADSHEET = st.secrets["connections"]["gsheets"]["spreadsheet"]
+
+if not GSHEETS_SPREADSHEET or GSHEETS_SPREADSHEET.strip() == "":
+    st.error("El servicio de inventario no esta disponible. Contacta al administrador de la pagina.")
+    st.stop()
+
 
 ### STREAMLIT CONFIG
 st.set_page_config(
@@ -131,11 +146,10 @@ def display_admin_dashboard(conn, df):
 if st.session_state.show_admin:
     display_admin_dashboard(conn, df)
 
-
 ### CHATBOT CONFIG
 
 agent = Agent(
-    model=Gemini(GEMINI_MODEL, api_key=st.secrets["GEMINI_API_KEY"]),
+    model=Gemini(GEMINI_MODEL, api_key=GEMINI_API_KEY),
     instructions=f"""
     Apenas el usuario envíe el primer mensaje, diles lo siguiente: Hola, bienvenido al inventario de Makers Tech. ¿Con qué te puedo ayudar? y si el primer mensaje del usuario es una pregunta, di el anterior mensaje sin preguntarles con que los puedes ayudar y responde su pregunta.
     
