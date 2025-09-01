@@ -79,44 +79,47 @@ else:
         st.session_state.show_admin = False
         st.rerun()
 
-if st.session_state.show_admin:
-    # Le pide al user un token que está en la Google Sheets
+def display_admin_dashboard(conn, df):
     token = st.text_input("Aquí va tu credencial:", type="password")
 
-    # Si el usuario escribe un Token, llamamos a la Google Sheet
-    if token:
-        result = conn.read(
-            worksheet="960299724",  # Se va a la sheet llamada "Credenciales"
-            ttl=0,
-            usecols=[0],
-            nrows=2
-        )
-        stored_token = result.iloc[0, 0] # Accede la cell donde esta la credencial
+    if not token:
+        st.info("Ingresa el token para acceder al panel de administrador")
+        return #
+    
+    # Se obtiene la sheet llamada "Credenciales" que tiene la credencial
+    result = conn.read(
+        worksheet="960299724",  
+        ttl=0,
+        usecols=[0],
+        nrows=2
+    )
+    stored_token = result.iloc[0, 0] # Accede la celda donde está la credencial
 
-        # Si la credencial dada por el usuario es la misma que está en la Sheet de Credenciales ve la dashboard
-        if token == stored_token:
-            st.success("Acceso concedido")
+    if token != stored_token:
+        st.error("Token incorrecto")
+        return # Si el token es incorrecto retornamos el error temprano
 
-            # Mostrar DataFrame completo
-            st.dataframe(df)
+    st.success("Acceso concedido")
 
-            # Visualización: número de cada producto
-            st.write("### Cantidad por producto")
-            vizualizador_productos_df = df.set_index("Producto")["Cantidad"]
-            st.bar_chart(vizualizador_productos_df)
+    st.dataframe(df)
 
-            # Visualización: número de productos por marca
-            st.write("### Cantidad total por marca")
-            vizualizador_por_marca_df = df.set_index("Marca")["Cantidad"]
-            st.bar_chart(vizualizador_por_marca_df, x_label="Marca", y_label="Cantidad")
+    # Visualizamos el numero de cada producto
+    st.write("### Cantidad por producto")
+    vizualizador_productos_df = df.set_index("Producto")["Cantidad"]
+    st.bar_chart(vizualizador_productos_df)
 
-            # Visualización: distribución de productos por precio
-            st.write("### Distribución de productos por precio")
-            vizualizador_por_precio = df.set_index("Precio")["Cantidad"]
-            st.bar_chart(vizualizador_por_precio, x_label="Precios", y_label="Cantidad")
+    # Visualizamos el numero de productos por marca
+    st.write("### Cantidad total por marca")
+    vizualizador_por_marca_df = df.set_index("Marca")["Cantidad"]
+    st.bar_chart(vizualizador_por_marca_df, x_label="Marca", y_label="Cantidad")
 
-        else:
-            st.error("Token incorrecto")
+    # Visualizamos la distribucion de productos por precio
+    st.write("### Distribucion de productos por precio")
+    vizualizador_por_precio = df.set_index("Precio")["Cantidad"]
+    st.bar_chart(vizualizador_por_precio, x_label="Precios", y_label="Cantidad")
+
+if st.session_state.show_admin:
+    display_admin_dashboard(conn, df)
 
 
 ### CHATBOT CONFIG
