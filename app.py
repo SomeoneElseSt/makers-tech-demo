@@ -4,6 +4,7 @@ from streamlit_gsheets import GSheetsConnection
 from agno.agent import Agent
 from agno.models.google import Gemini
 from credentials import validate_token, TIME_TO_REFRESH
+from admin_vizualizations import per_product_quantity_vizualization, per_product_brand_vizualization, per_product_price_vizualization
 
 ### RECS
 
@@ -117,18 +118,15 @@ def display_admin_dashboard(conn, df):
 
     # Visualizamos el numero de cada producto
     st.write("### Cantidad por producto")
-    vizualizador_productos_df = df.set_index("Producto")["Cantidad"]
-    st.bar_chart(vizualizador_productos_df)
+    per_product_quantity_vizualization(df)
 
     # Visualizamos el numero de productos por marca
     st.write("### Cantidad total por marca")
-    vizualizador_por_marca_df = df.set_index("Marca")["Cantidad"]
-    st.bar_chart(vizualizador_por_marca_df, x_label="Marca", y_label="Cantidad")
+    per_product_brand_vizualization(df)
 
     # Visualizamos la distribucion de productos por precio
     st.write("### Distribucion de productos por precio")
-    vizualizador_por_precio = df.set_index("Precio")["Cantidad"]
-    st.bar_chart(vizualizador_por_precio, x_label="Precios", y_label="Cantidad")
+    per_product_price_vizualization(df)
 
 if st.session_state.show_admin:
     display_admin_dashboard(conn, df)
