@@ -5,6 +5,7 @@ from agno.agent import Agent
 from agno.models.google import Gemini
 from credentials import validate_token, TIME_TO_REFRESH
 from admin_vizualizations import per_product_quantity_vizualization, per_product_brand_vizualization, per_product_price_vizualization
+from sheet_clients import inventory_sheet_client
 
 ### RECS
 
@@ -67,12 +68,7 @@ st.write("De igual manera, si eres administrador, presiona el botón de abajo e 
 
 ### GOOGLE SHEETS CONFIG PARA DB MANAGEMENT USANDO GSHEETSCONNECTION
 
-conn = st.connection("gsheets", type=GSheetsConnection) # Establece una conexion con una Google Sheet con tal que esta sea publica y tenga permisos de read
-
-df = conn.read( # Lee la informacion de la Google Sheet
-    worksheet=SHEET_INVENTARIO, # Se va a la primera Sheet, el Inventario
-    ttl=TIME_TO_REFRESH # Desactiva el caching con un time de refresh de 0para que siempre obtenga los datos mas recientes de la Sheet
-)
+df = inventory_sheet_client()
 
 pd.set_option('display.max_colwidth', None) # Importante: Hay que expandir el DF manualmente para que el Agente pueda leer el texto en las columnas y filas completo
 pd.set_option('display.max_columns', None) # Tanto en las columnas
@@ -100,14 +96,14 @@ else:
         st.session_state.show_admin = False
         st.rerun()
 
-def display_admin_dashboard(conn, df):
+def display_admin_dashboard(df):
     input_token = st.text_input("Aquí va tu credencial:", type="password")
 
     if not input_token:
         st.info("Ingresa el token para acceder al panel de administrador")
         return #
     
-    validation_result = validate_token(input_token, conn, df, st)
+    validation_result = validate_token(input_token)
 
     if not validation_result:
         st.error("Token incorrecto")
@@ -129,7 +125,7 @@ def display_admin_dashboard(conn, df):
     per_product_price_vizualization(df)
 
 if st.session_state.show_admin:
-    display_admin_dashboard(conn, df)
+    display_admin_dashboard(df)
 
 ### CHATBOT CONFIG
 

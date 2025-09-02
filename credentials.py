@@ -1,3 +1,7 @@
+import streamlit as st
+from streamlit_gsheets import GSheetsConnection
+
+
 # Credentials Constant
 CREDENTIALS_COLUMN_INDEX = 0
 CREDENTIALS_ROW_COUNT = 2
@@ -6,7 +10,10 @@ CREDENTIAL_CELL_COL = 0
 SHEET_CREDENCIALES = "960299724"
 TIME_TO_REFRESH = 0 
 
-def validate_token(input_token, conn, df, st):
+
+def validate_token(input_token):
+
+    conn = st.connection("gsheets", type=GSheetsConnection)
 
     credentials_sheet = conn.read(
         worksheet=SHEET_CREDENCIALES,  
