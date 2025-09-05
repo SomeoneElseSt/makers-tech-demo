@@ -1,11 +1,10 @@
 import pandas as pd
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
-from agno.agent import Agent
-from agno.models.google import Gemini
 from credentials import validate_token, TIME_TO_REFRESH
 from admin_vizualizations import per_product_quantity_vizualization, per_product_brand_vizualization, per_product_price_vizualization
 from sheet_clients import inventory_sheet_client
+from agent_client import create_inventory_agent, build_conversation_history, create_enhanced_prompt, get_agent_response
 
 ### RECS
 
@@ -35,8 +34,6 @@ from sheet_clients import inventory_sheet_client
 
 # CONSTANTES
 SHEET_INVENTARIO = "0"
-GEMINI_MODEL = "gemini-2.0-flash"
-MAX_CONVERSATION_HISTORY = 10
 
 # Revisamos si la Gemini API key esta en el secrets.toml y si no lo esta le hacemos saber al usario que hay un error
 GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
@@ -129,30 +126,7 @@ if st.session_state.show_admin:
 
 ### CHATBOT CONFIG
 
-agent = Agent(
-    model=Gemini(GEMINI_MODEL, api_key=GEMINI_API_KEY),
-    instructions=f"""
-    Apenas el usuario envíe el primer mensaje, diles lo siguiente: Hola, bienvenido al inventario de Makers Tech. ¿Con qué te puedo ayudar? y si el primer mensaje del usuario es una pregunta, di el anterior mensaje sin preguntarles con que los puedes ayudar y responde su pregunta.
-    
-    Eres un manager de inventario y recomendador de productos experto. Respondes en castellano cordial al usuario.
-
-    Estas a cargo de informa a usuarios de Makers Tech sobre el inventario de la Empresa. 
-    
-    Obtendras preguntas como:
-
-    1. Cuantas computadoras hay disponibles actualmente?
-    2. Puedes contarme mas sobre la computadora de la marca Apple?
-    3. Cual es el precio de la computadora de la marca Apple?
-
-    Ofrece la informacion de manera directa, clara, y sucinta.
-    
-    Si tu ussario hace una pregunta no relacionada al inventario de Makers Tech, pidele que aclare su intencion/pregunta. Si la repite, dile que no lo puedes ayudar.  
-
-    Debes responder de acuerdo a la informacion que tienes disponible aqui: {df}
-
-    """,
-    markdown=True,
-)
+agent = create_inventory_agent(GEMINI_API_KEY, df)
 
 ### CHATBOT UI
 
@@ -175,34 +149,14 @@ if prompt := st.chat_input("Preguntale al bot sobre que tenemos en inventario, p
         st.markdown(prompt)
 
     # Para que el modelo tenga memoria, creamos una historia de conversacion en base a los ultimos mensajes
-    conversation_history = ""
-    for msg in st.session_state.messages[-MAX_CONVERSATION_HISTORY:]:  # Solo damos los ultimos 10 mensajes del usuario
-        role = "Usuario" if msg["role"] == "user" else "Asistente"
-        conversation_history += f"{role}: {msg['content']}\n\n"
+    conversation_history = build_conversation_history(st.session_state.messages)
 
     # Se crea un prompt dandole al modelo los ultimos mensajes y el DF para que no pierda contexto
-    enhanced_prompt = f"""
-    Historial de la conversación:
-    {conversation_history}
-
-    Responde a la última consulta del usuario basándote en el contexto de la conversación. Ofrece leading questions y recomendaciones como sea aplicable.
-    
-    Recuerda que tienes la siguiente informacion disponible: {df} mas que no lo menciones al usuario.
-    """
+    enhanced_prompt = create_enhanced_prompt(conversation_history, df)
 
     # Se envia al agente el enhanced_prompt con
     with st.chat_message("assistant"):
-        placeholder = st.empty()
-        full_response = ""
-
-        response_stream = agent.run( # El metodo .run activa el agente con la libreria Agno
-            message=enhanced_prompt,
-            stream=True
-        )
-
-        for chunk in response_stream:
-            full_response += chunk.content
-            placeholder.write(full_response) # Mostramos la respuesta del agente conforme llega en ves de esperar a que termine
+        full_response = get_agent_response(agent, enhanced_prompt)
 
     # Mostramos la respuesta del agente
     st.session_state.messages.append({"role": "assistant", "content": full_response})
