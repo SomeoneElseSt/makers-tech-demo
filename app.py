@@ -3,7 +3,7 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 from credentials import validate_token, TIME_TO_REFRESH
 from admin_vizualizations import per_product_quantity_vizualization, per_product_brand_vizualization, per_product_price_vizualization
-from sheet_clients import inventory_sheet_client
+from sheet_clients import get_configured_inventory_dataframe
 from agent_client import create_inventory_agent, build_conversation_history, create_enhanced_prompt, get_agent_response
 
 ### RECS
@@ -63,13 +63,9 @@ st.header("¡Hola! 👋")
 st.write("Bienvenido al inventario de Makers Tech. Abajo puedes preguntarle a un bot lo que quieras sobre el inventario de Makers Tech.")
 st.write("De igual manera, si eres administrador, presiona el botón de abajo e ingresa la credencial en la segunda página de Google Sheets.")
 
-### GOOGLE SHEETS CONFIG PARA DB MANAGEMENT USANDO GSHEETSCONNECTION
+### DATAFRAME CONFIG PARA DB MANAGEMENT
 
-df = inventory_sheet_client()
-
-pd.set_option('display.max_colwidth', None) # Importante: Hay que expandir el DF manualmente para que el Agente pueda leer el texto en las columnas y filas completo
-pd.set_option('display.max_columns', None) # Tanto en las columnas
-pd.set_option('display.max_rows', None) # Como en las filas
+df = get_configured_inventory_dataframe()
 
 ### DF DEBUGGING PRINTS
 
